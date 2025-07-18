@@ -2,13 +2,14 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Phone, Mail, MessageSquare, CreditCard } from "lucide-react"
+import { Phone, Mail, CreditCard } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
 // API基础URL
@@ -301,10 +302,18 @@ export default function LoginPage() {
                   variant="outline"
                   onClick={() => handleThirdPartyLogin("qq")}
                   disabled={isLoading}
-                  className="h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+                  className="h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50 flex items-center justify-center gap-2 px-3"
                 >
-                  <MessageSquare className="w-5 h-5 mr-2 text-blue-600" />
-                  QQ登录
+                  <div className="relative w-6 h-6 flex-shrink-0">
+                    <Image 
+                      src="/QQ图标.png" 
+                      alt="QQ图标" 
+                      fill
+                      className="object-contain"
+                      priority
+                    />
+                  </div>
+                  <span>QQ登录</span>
                 </Button>
                 <Button
                   variant="outline"
