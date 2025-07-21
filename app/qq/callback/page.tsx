@@ -5,10 +5,12 @@ import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 // 创建一个内部组件来使用useSearchParams
 function CallbackContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [message, setMessage] = useState('')
 
@@ -17,29 +19,41 @@ function CallbackContent() {
     const code = searchParams.get('code')
     const state = searchParams.get('state')
     const error = searchParams.get('error')
+    const errorDescription = searchParams.get('error_description')
 
     if (error) {
       setStatus('error')
-      setMessage('QQ登录授权失败，请重试')
+      setMessage(errorDescription || 'QQ登录授权失败，请重试')
     } else if (code) {
       // 模拟处理登录逻辑
       setTimeout(() => {
+        // 模拟登录成功
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            id: "qq-" + Math.random().toString(36).substring(2, 10),
+            name: "QQ用户",
+            loginType: "qq",
+            loginTime: new Date().toISOString(),
+          })
+        );
+        
         setStatus('success')
         setMessage('QQ登录成功！正在跳转...')
         
-        // 3秒后跳转到首页或仪表板
+        // 3秒后跳转到仪表板
         setTimeout(() => {
-          window.location.href = '/dashboard'
-        }, 3000)
+          router.push('/dashboard')
+        }, 2000)
       }, 1500)
     } else {
       setStatus('error')
       setMessage('缺少必要的授权参数')
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   const handleRetry = () => {
-    window.location.href = '/'
+    router.push('/')
   }
 
   return (

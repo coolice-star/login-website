@@ -140,7 +140,13 @@ export default function LoginPage() {
 
   // 第三方登录
   const handleThirdPartyLogin = (provider: string) => {
-    // 第三方登录暂时保持模拟
+    if (provider === "qq") {
+      // QQ登录跳转到授权页面
+      router.push("/qq/authorize");
+      return;
+    }
+    
+    // 其他第三方登录暂时保持模拟
     setIsLoading(true);
     
     // 模拟API调用延迟
