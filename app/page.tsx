@@ -11,9 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Phone, Mail, CreditCard } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
-
-// API基础URL
-const API_BASE_URL = "http://localhost:5000/api";
+import { API_BASE_URL } from "@/lib/env"
 
 export default function LoginPage() {
   const router = useRouter()
