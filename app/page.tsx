@@ -13,7 +13,7 @@ import { Phone, Mail, CreditCard } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
 // API基础URL
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://testend.coolice.top/api";
 
 export default function LoginPage() {
   const router = useRouter()
