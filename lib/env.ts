@@ -16,4 +16,4 @@ export function getEnv(key: string, defaultValue: string = ''): string {
 }
 
 // 当前环境名称
-export const ENV_NAME = process.env.NODE_ENV || 'development'; 
+export const ENV_NAME = process.env.NODE_ENV || 'production'; 
