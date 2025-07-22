@@ -1,6 +1,6 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Phone, Mail, CreditCard } from "lucide-react"
+import { Phone, Mail, CreditCard, Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { API_BASE_URL } from "@/lib/env"
 
-export default function LoginPage() {
+// 登录表单内容组件
+function LoginFormContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
@@ -181,178 +182,198 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            {isRegistering ? "欢迎注册" : "欢迎登录"}
-          </h1>
-          <p className="text-gray-600 mt-2">选择您喜欢的{isRegistering ? "注册" : "登录"}方式</p>
-        </div>
-
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl text-center">{isRegistering ? "创建账户" : "登录账户"}</CardTitle>
-            <CardDescription className="text-center">安全便捷的多种{isRegistering ? "注册" : "登录"}方式</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="email" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="phone" className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  手机登录
-                </TabsTrigger>
-                <TabsTrigger value="email" className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  {isRegistering ? "邮箱注册" : "账号登录"}
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="phone" className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">手机号码</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="请输入手机号码"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="code">验证码</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="code"
-                      type="text"
-                      placeholder="请输入验证码"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      className="h-12"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={sendSMSCode}
-                      disabled={!phoneNumber || isLoading}
-                      className="h-12 px-4 whitespace-nowrap bg-transparent"
-                    >
-                      {codeSent ? "重新发送" : "发送验证码"}
-                    </Button>
-                  </div>
-                </div>
-                <Button
-                  onClick={handlePhoneLogin}
-                  disabled={!phoneNumber || !verificationCode || isLoading}
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                >
-                  {isLoading ? "登录中..." : "手机号登录"}
-                </Button>
-              </TabsContent>
-
-              <TabsContent value="email" className="space-y-4">
-                {isRegistering && (
-                  <div className="space-y-2">
-                    <Label htmlFor="username">用户名 (可选)</Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder="请输入用户名"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="h-12"
-                    />
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">邮箱{!isRegistering && "/用户名"}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder={`请输入邮箱${!isRegistering ? "或用户名" : ""}`}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">密码</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder={isRegistering ? "请设置密码 (至少8位，包含字母和数字)" : "请输入密码"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-12"
-                  />
-                </div>
-                <Button
-                  onClick={handleEmailAuth}
-                  disabled={!email || !password || isLoading}
-                  className="w-full h-12 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
-                >
-                  {isLoading ? "处理中..." : isRegistering ? "注册账号" : "账号密码登录"}
-                </Button>
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={toggleAuthMode}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    {isRegistering ? "已有账号？返回登录" : "没有账号？立即注册"}
-                  </button>
-                </div>
-              </TabsContent>
-            </Tabs>
-
-            <div className="mt-6">
-              <Separator className="my-4" />
-              <p className="text-center text-sm text-gray-600 mb-4">或使用第三方账号登录</p>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => handleThirdPartyLogin("qq")}
-                  disabled={isLoading}
-                  className="h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50 flex items-center justify-center gap-2 px-3"
-                >
-                  <div className="relative w-6 h-6 flex-shrink-0">
-                    <Image 
-                      src="/QQ图标.svg" 
-                      alt="QQ图标" 
-                      fill
-                      className="object-contain"
-                      priority
-                    />
-                  </div>
-                  <span>QQ登录</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleThirdPartyLogin("alipay")}
-                  disabled={isLoading}
-                  className="h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
-                >
-                  <CreditCard className="w-5 h-5 mr-2 text-blue-600" />
-                  支付宝
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-6 text-center text-xs text-gray-500">
-              {isRegistering ? "注册" : "登录"}即表示您同意我们的
-              <a href="#" className="text-blue-600 hover:underline">
-                服务条款
-              </a>
-              和
-              <a href="#" className="text-blue-600 hover:underline">
-                隐私政策
-              </a>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="w-full max-w-md">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          {isRegistering ? "欢迎注册" : "欢迎登录"}
+        </h1>
+        <p className="text-gray-600 mt-2">选择您喜欢的{isRegistering ? "注册" : "登录"}方式</p>
       </div>
+
+      <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="space-y-1 pb-4">
+          <CardTitle className="text-xl text-center">{isRegistering ? "创建账户" : "登录账户"}</CardTitle>
+          <CardDescription className="text-center">安全便捷的多种{isRegistering ? "注册" : "登录"}方式</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="email" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="phone" className="flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                手机登录
+              </TabsTrigger>
+              <TabsTrigger value="email" className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                {isRegistering ? "邮箱注册" : "账号登录"}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="phone" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">手机号码</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="请输入手机号码"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="h-12"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="code">验证码</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="code"
+                    type="text"
+                    placeholder="请输入验证码"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    className="h-12"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={sendSMSCode}
+                    disabled={!phoneNumber || isLoading}
+                    className="h-12 px-4 whitespace-nowrap bg-transparent"
+                  >
+                    {codeSent ? "重新发送" : "发送验证码"}
+                  </Button>
+                </div>
+              </div>
+              <Button
+                onClick={handlePhoneLogin}
+                disabled={!phoneNumber || !verificationCode || isLoading}
+                className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              >
+                {isLoading ? "登录中..." : "手机号登录"}
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="email" className="space-y-4">
+              {isRegistering && (
+                <div className="space-y-2">
+                  <Label htmlFor="username">用户名 (可选)</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="请输入用户名"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="h-12"
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="email">邮箱{!isRegistering && "/用户名"}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder={`请输入邮箱${!isRegistering ? "或用户名" : ""}`}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">密码</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder={isRegistering ? "请设置密码 (至少8位，包含字母和数字)" : "请输入密码"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12"
+                />
+              </div>
+              <Button
+                onClick={handleEmailAuth}
+                disabled={!email || !password || isLoading}
+                className="w-full h-12 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+              >
+                {isLoading ? "处理中..." : isRegistering ? "注册账号" : "账号密码登录"}
+              </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={toggleAuthMode}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  {isRegistering ? "已有账号？返回登录" : "没有账号？立即注册"}
+                </button>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="mt-6">
+            <Separator className="my-4" />
+            <p className="text-center text-sm text-gray-600 mb-4">或使用第三方账号登录</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                onClick={() => handleThirdPartyLogin("qq")}
+                disabled={isLoading}
+                className="h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50 flex items-center justify-center gap-2 px-3"
+              >
+                <div className="relative w-6 h-6 flex-shrink-0">
+                  <Image 
+                    src="/QQ图标.svg" 
+                    alt="QQ图标" 
+                    fill
+                    className="object-contain"
+                    priority
+                  />
+                </div>
+                <span>QQ登录</span>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleThirdPartyLogin("alipay")}
+                disabled={isLoading}
+                className="h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+              >
+                <CreditCard className="w-5 h-5 mr-2 text-blue-600" />
+                支付宝
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-6 text-center text-xs text-gray-500">
+            {isRegistering ? "注册" : "登录"}即表示您同意我们的
+            <a href="#" className="text-blue-600 hover:underline">
+              服务条款
+            </a>
+            和
+            <a href="#" className="text-blue-600 hover:underline">
+              隐私政策
+            </a>
+          </div>
+        </CardContent>
+      </Card>
     </div>
-  )
+  );
+}
+
+// 加载中状态组件
+function LoadingState() {
+  return (
+    <div className="w-full max-w-md flex flex-col items-center justify-center p-8">
+      <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
+      <h2 className="text-xl font-semibold">加载中...</h2>
+      <p className="text-gray-500 mt-2">请稍候</p>
+    </div>
+  );
+}
+
+// 主页面组件
+export default function LoginPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <Suspense fallback={<LoadingState />}>
+        <LoginFormContent />
+      </Suspense>
+    </div>
+  );
 } 
