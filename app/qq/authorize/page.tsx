@@ -31,17 +31,17 @@ export default function QQAuthorizePage() {
   
   // 取消授权
   const handleCancel = () => {
-    router.push(`/qq/callback?error=user_denied&error_description=用户取消了授权`)
+    router.push(`/qq/callback?code=cancel&state=success`)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-700 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center border-b pb-6">
           <div className="flex items-center justify-center mb-4">
             <div className="relative w-16 h-16 mr-2">
               <Image 
-                src="/QQ图标.png" 
+                src="/QQ图标.svg" 
                 alt="QQ图标" 
                 fill
                 className="object-contain"
@@ -51,7 +51,7 @@ export default function QQAuthorizePage() {
           </div>
           <CardTitle className="text-2xl font-bold">QQ账号授权</CardTitle>
           <CardDescription className="mt-2">
-            授权登录"短信测试登录系统"
+            授权登录"优品商城"
           </CardDescription>
         </CardHeader>
         

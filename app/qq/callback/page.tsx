@@ -6,62 +6,60 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 // 创建一个内部组件来使用useSearchParams
 function CallbackContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'success'>('loading')
   const [message, setMessage] = useState('')
 
   useEffect(() => {
     // 获取URL参数
     const code = searchParams.get('code')
     const state = searchParams.get('state')
-    const error = searchParams.get('error')
-    const errorDescription = searchParams.get('error_description')
-
-    if (error) {
-      setStatus('error')
-      setMessage(errorDescription || 'QQ登录授权失败，请重试')
-    } else if (code) {
-      // 模拟处理登录逻辑
+    
+    // 无论有没有错误参数，都模拟登录成功
+    setTimeout(() => {
+      // 模拟登录成功
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          id: "qq-" + Math.random().toString(36).substring(2, 10),
+          name: "QQ用户",
+          loginType: "qq",
+          loginTime: new Date().toISOString(),
+        })
+      );
+      
+      setStatus('success')
+      setMessage('QQ登录成功！正在跳转...')
+      
+      // 2秒后跳转到商城页面
       setTimeout(() => {
-        // 模拟登录成功
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            id: "qq-" + Math.random().toString(36).substring(2, 10),
-            name: "QQ用户",
-            loginType: "qq",
-            loginTime: new Date().toISOString(),
-          })
-        );
-        
-        setStatus('success')
-        setMessage('QQ登录成功！正在跳转...')
-        
-        // 3秒后跳转到仪表板
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 2000)
-      }, 1500)
-    } else {
-      setStatus('error')
-      setMessage('缺少必要的授权参数')
-    }
+        router.push('/shop')
+      }, 2000)
+    }, 1500)
   }, [searchParams, router])
-
-  const handleRetry = () => {
-    router.push('/')
-  }
 
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
+        <div className="flex justify-center mb-4">
+          <div className="relative w-16 h-16">
+            <Image 
+              src="/QQ图标.svg" 
+              alt="QQ图标" 
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+        </div>
         <CardTitle className="text-2xl font-bold">QQ登录回调</CardTitle>
         <CardDescription>
-          正在处理您的QQ登录信息...
+          {status === 'loading' ? '正在处理您的QQ登录信息...' : '授权成功！'}
         </CardDescription>
       </CardHeader>
       <CardContent className="text-center space-y-4">
@@ -79,16 +77,6 @@ function CallbackContent() {
             <p className="text-sm text-gray-500">页面将自动跳转</p>
           </div>
         )}
-
-        {status === 'error' && (
-          <div className="flex flex-col items-center space-y-4">
-            <XCircle className="h-12 w-12 text-red-500" />
-            <p className="text-red-600 font-medium">{message}</p>
-            <Button onClick={handleRetry} className="w-full">
-              返回登录页面
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   )
@@ -99,6 +87,17 @@ function LoadingCard() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
+        <div className="flex justify-center mb-4">
+          <div className="relative w-16 h-16">
+            <Image 
+              src="/QQ图标.svg" 
+              alt="QQ图标" 
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+        </div>
         <CardTitle className="text-2xl font-bold">QQ登录回调</CardTitle>
         <CardDescription>
           正在加载...
@@ -117,7 +116,7 @@ function LoadingCard() {
 // 主页面组件
 export default function QQCallbackPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-700 p-4">
       <Suspense fallback={<LoadingCard />}>
         <CallbackContent />
       </Suspense>
