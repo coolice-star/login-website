@@ -1,10 +1,9 @@
 /**
- * 环境变量工具
- * 用于获取和管理环境变量
+ * 环境变量配置
  */
 
-// API基础URL
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+// API基础URL - 确保包含/api路径
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://1fe81f0.r11.cpolar.top/api';
 
 // 环境判断
 export const isDevelopment = process.env.NODE_ENV === 'development';

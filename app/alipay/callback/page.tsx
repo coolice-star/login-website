@@ -8,7 +8,7 @@ import Image from 'next/image'
 import { API_BASE_URL } from '@/lib/env'
 import { toast } from '@/components/ui/use-toast'
 
-export default function QQCallbackPage() {
+export default function AlipayCallbackPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -18,11 +18,11 @@ export default function QQCallbackPage() {
   useEffect(() => {
     // 获取URL参数
     const code = searchParams.get('code')
-    const type = searchParams.get('type') || 'qq'  // 默认为qq类型
+    const type = searchParams.get('type')
     
-    console.log('QQ回调页面接收到的参数:', { code, type })
+    console.log('回调页面接收到的参数:', { code, type })
     
-    if (!code) {
+    if (!code || !type) {
       setStatus('error')
       setMessage('缺少必要参数')
       return
@@ -30,31 +30,31 @@ export default function QQCallbackPage() {
     
     const processCallback = async () => {
       try {
-        // 构建回调URL
+        // 构建回调URL - 确保API路径正确
         const apiUrl = `${API_BASE_URL}/auth/callback?type=${type}&code=${code}`
-        console.log('处理QQ回调:', apiUrl)
+        console.log('处理回调:', apiUrl)
         
         const response = await fetch(apiUrl, {
           credentials: 'include'
         })
         
-        console.log('QQ回调响应状态:', response.status, response.statusText)
+        console.log('回调响应状态:', response.status, response.statusText)
         
         const responseText = await response.text()
-        console.log('QQ回调原始响应:', responseText)
+        console.log('回调原始响应:', responseText)
         
         let data
         try {
           data = JSON.parse(responseText)
         } catch (e) {
-          console.error('解析QQ回调响应失败:', e)
+          console.error('解析回调响应失败:', e)
           throw new Error(`解析回调响应失败: ${responseText}`)
         }
         
-        console.log('QQ回调响应数据:', data)
+        console.log('回调响应数据:', data)
         
         if (!response.ok || !data.success) {
-          throw new Error(data.message || 'QQ登录失败')
+          throw new Error(data.message || '登录失败')
         }
         
         // 检查用户数据
@@ -65,9 +65,9 @@ export default function QQCallbackPage() {
         // 存储用户信息
         const userData = {
           id: data.data.user.id,
-          name: data.data.user.username || 'QQ用户',
+          name: data.data.user.username || '支付宝用户',
           avatar: data.data.user.avatar || '',
-          social_type: data.data.user.social_type || 'qq',
+          social_type: data.data.user.social_type || 'alipay',
           loginTime: new Date().toISOString()
         }
         
@@ -80,7 +80,7 @@ export default function QQCallbackPage() {
         
         setUser(userData)
         setStatus('success')
-        setMessage('QQ登录成功！正在跳转...')
+        setMessage('支付宝登录成功！正在跳转...')
         
         // 显示欢迎提示
         toast({
@@ -93,9 +93,9 @@ export default function QQCallbackPage() {
           router.push('/shop')
         }, 2000)
       } catch (error) {
-        console.error('处理QQ回调失败:', error)
+        console.error('处理回调失败:', error)
         setStatus('error')
-        setMessage(error instanceof Error ? error.message : 'QQ登录失败')
+        setMessage(error instanceof Error ? error.message : '登录失败')
         
         // 3秒后跳转到登录页面
         setTimeout(() => {
@@ -114,17 +114,17 @@ export default function QQCallbackPage() {
           <div className="flex justify-center mb-4">
             <div className="relative w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
               <Image 
-                src="/qq-icon.svg" 
-                alt="QQ登录" 
+                src="/placeholder-logo.svg" 
+                alt="支付宝登录" 
                 width={32} 
                 height={32} 
                 className="relative z-10"
               />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">QQ登录</CardTitle>
+          <CardTitle className="text-2xl font-bold">支付宝登录</CardTitle>
           <CardDescription>
-            {status === 'loading' ? '正在处理您的QQ登录信息...' : 
+            {status === 'loading' ? '正在处理您的支付宝登录信息...' : 
              status === 'success' ? '授权成功！' : 
              '登录出现问题'}
           </CardDescription>
@@ -165,7 +165,7 @@ export default function QQCallbackPage() {
                       />
                     )}
                   </div>
-                  <span>{user.name || "QQ用户"}</span>
+                  <span>{user.name || "支付宝用户"}</span>
                 </div>
               )}
               <p className="text-sm text-gray-500">页面将自动跳转</p>
@@ -175,7 +175,7 @@ export default function QQCallbackPage() {
           {status === 'error' && (
             <div className="flex flex-col items-center space-y-3">
               <XCircle className="h-12 w-12 text-red-500" />
-              <p className="text-red-600 font-medium">{message || 'QQ登录失败'}</p>
+              <p className="text-red-600 font-medium">{message || '登录失败'}</p>
               <p className="text-sm text-gray-500">即将返回登录页面</p>
             </div>
           )}
@@ -183,4 +183,4 @@ export default function QQCallbackPage() {
       </Card>
     </div>
   )
-}
+} 

@@ -39,7 +39,7 @@ export default function HomePage() {
       router.push("/shop")
     }
   }, [router])
-  
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* 导航栏 */}
@@ -81,15 +81,15 @@ export default function HomePage() {
               >
                 立即购物 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button 
-                variant="outline" 
+                    <Button
+                      variant="outline"
                 size="lg" 
                 className="border-white text-white hover:bg-white/10"
                 onClick={() => router.push('/login')}
               >
                 会员登录 <User className="ml-2 h-5 w-5" />
-              </Button>
-            </div>
+                    </Button>
+                  </div>
           </div>
           <div className="md:w-1/2 relative">
             <div className="aspect-[4/3] w-full relative">
@@ -137,8 +137,8 @@ export default function HomePage() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        </div>
+                </div>
+                </div>
       </section>
       
       {/* 热门分类 */}
@@ -148,7 +148,7 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold">热门分类</h2>
             <Button variant="ghost" className="text-blue-600 hover:text-blue-700">
               查看全部 <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
+                </Button>
           </div>
           
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -185,7 +185,7 @@ export default function HomePage() {
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">限时优惠</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { 
@@ -211,7 +211,7 @@ export default function HomePage() {
                 key={i} 
                 className={`rounded-xl overflow-hidden shadow-lg h-64 bg-gradient-to-br ${promo.color} text-white p-6 flex flex-col justify-between hover:shadow-xl transition-shadow cursor-pointer`}
                 onClick={() => router.push('/login')}
-              >
+                >
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-bold text-2xl mb-2">{promo.title}</h3>
@@ -271,7 +271,7 @@ export default function HomePage() {
           <div className="pt-8 border-t border-gray-800 text-center text-gray-500">
             <p>© 2023 优品商城 版权所有</p>
           </div>
-        </div>
+      </div>
       </footer>
     </div>
   )

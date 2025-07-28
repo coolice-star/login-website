@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { ShoppingBag, ShoppingCart, User, Search, Heart, LogOut } from "lucide-react"
+import { ShoppingBag, ShoppingCart, Search, Heart } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { UserDropdown } from "@/components/user-dropdown"
 
 // 模拟商品数据
 const PRODUCTS = [
@@ -64,11 +63,9 @@ export default function ShopPage() {
     setCartCount(prev => prev + 1);
   };
   
-  // 登出
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("access_token");
-    router.push("/");
+  // 处理用户资料更新
+  const handleProfileUpdate = (updatedUser: any) => {
+    setUser(updatedUser);
   };
   
   if (!user) {
@@ -109,26 +106,7 @@ export default function ShopPage() {
                 <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">{cartCount}</Badge>
               </Button>
               
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder-user.jpg" alt={user.name} />
-                      <AvatarFallback>{user.name?.charAt(0) || "U"}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span>个人中心</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="flex items-center gap-2" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4" />
-                    <span>退出登录</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <UserDropdown />
             </div>
           </div>
           

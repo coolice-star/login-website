@@ -12,6 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Phone, Mail, CreditCard, Loader2 } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { API_BASE_URL } from "@/lib/env"
+import { AlipayLogin } from "@/components/alipay-login"
+import { QQLogin } from "@/components/qq-login"
+import { WxLogin } from "@/components/wx-login"
 
 // 登录表单内容组件
 function LoginFormContent() {
@@ -25,6 +28,7 @@ function LoginFormContent() {
   const [codeSent, setCodeSent] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
   const [username, setUsername] = useState("")
+  const [countdown, setCountdown] = useState(0); // 新增倒计时状态
 
   // 检查URL参数，如果有register=true，则显示注册表单
   useEffect(() => {
@@ -42,24 +46,47 @@ function LoginFormContent() {
       let endpoint = "";
       
       if (type === "phone") {
-        endpoint = "/api/auth/login/phone";
+        endpoint = "/auth/login/phone";
       } else {
-        endpoint = isRegistering ? "/api/auth/register" : "/api/auth/login";
+        endpoint = isRegistering ? "/auth/register" : "/auth/login";
       }
       
+      // 修正API路径，避免重复添加/api前缀
+      const apiUrl = `${API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`}${endpoint}`;
+      console.log("发送请求到:", apiUrl);
+      
       // 发送API请求
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
+        credentials: "include", // 添加凭证
       });
       
-      const result = await response.json();
+      console.log("登录响应状态:", response.status, response.statusText);
+      
+      const responseText = await response.text();
+      console.log("登录原始响应:", responseText);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error("解析响应失败:", e);
+        throw new Error(`解析响应失败: ${responseText}`);
+      }
+      
+      console.log("登录响应数据:", result);
       
       if (!response.ok || !result.success) {
         throw new Error(result.message || "登录失败");
+      }
+      
+      // 检查用户数据
+      if (!result.data || !result.data.user) {
+        throw new Error("返回的数据缺少用户信息");
       }
       
       // 登录成功，存储用户信息和令牌
@@ -103,21 +130,59 @@ function LoginFormContent() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sms/send-code`, {
+      // 修正API路径，避免重复添加/api前缀
+      const apiUrl = `${API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`}/sms/send-code`;
+      console.log("发送验证码请求到:", apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ phone: phoneNumber }),
+        credentials: "include", // 添加凭证
       });
       
-      const result = await response.json();
+      console.log("发送验证码响应状态:", response.status, response.statusText);
+      
+      const responseText = await response.text();
+      console.log("发送验证码原始响应:", responseText);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error("解析响应失败:", e);
+        throw new Error(`解析响应失败: ${responseText}`);
+      }
+      
+      console.log("发送验证码响应数据:", result);
       
       if (!response.ok || !result.success) {
+        // 检查是否是频率限制错误
+        if (result.error_code === "SMS_RATE_LIMIT" && result.data && result.data.remaining_time) {
+          // 设置倒计时
+          setCountdown(result.data.remaining_time);
+          throw new Error(`${result.message}`);
+        }
         throw new Error(result.message || "发送验证码失败");
       }
       
       setCodeSent(true);
+      // 设置60秒倒计时
+      setCountdown(60);
+      
+      // 启动倒计时定时器
+      const timer = setInterval(() => {
+        setCountdown((prevCountdown) => {
+          if (prevCountdown <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prevCountdown - 1;
+        });
+      }, 1000);
+      
       toast({
         title: "验证码已发送",
         description: "请查看您的手机短信",
@@ -174,6 +239,11 @@ function LoginFormContent() {
       setIsLoading(false);
       router.push("/shop");
     }, 1500);
+  }
+
+  // 第三方登录成功回调
+  const handleThirdPartyLoginSuccess = (userData: any) => {
+    router.push("/shop");
   }
 
   // 切换登录/注册模式
@@ -235,12 +305,17 @@ function LoginFormContent() {
                     type="button"
                     variant="outline"
                     onClick={sendSMSCode}
-                    disabled={!phoneNumber || isLoading}
+                    disabled={!phoneNumber || isLoading || countdown > 0} // 添加倒计时禁用
                     className="h-12 px-4 whitespace-nowrap bg-transparent"
                   >
                     {codeSent ? "重新发送" : "发送验证码"}
                   </Button>
                 </div>
+                {countdown > 0 && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    请等待 {countdown} 秒后重新发送
+                  </p>
+                )}
               </div>
               <Button
                 onClick={handlePhoneLogin}
@@ -310,33 +385,10 @@ function LoginFormContent() {
             <Separator className="my-4" />
             <p className="text-center text-sm text-gray-600 mb-4">或使用第三方账号登录</p>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                onClick={() => handleThirdPartyLogin("qq")}
-                disabled={isLoading}
-                className="h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50 flex items-center justify-center gap-2 px-3"
-              >
-                <div className="relative w-6 h-6 flex-shrink-0">
-                  <Image 
-                    src="/QQ图标.svg" 
-                    alt="QQ图标" 
-                    fill
-                    className="object-contain"
-                    priority
-                  />
-                </div>
-                <span>QQ登录</span>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleThirdPartyLogin("alipay")}
-                disabled={isLoading}
-                className="h-12 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
-              >
-                <CreditCard className="w-5 h-5 mr-2 text-blue-600" />
-                支付宝
-              </Button>
+            <div className="grid grid-cols-3 gap-3">
+              <WxLogin onLoginSuccess={handleThirdPartyLoginSuccess} />
+              <QQLogin onLoginSuccess={handleThirdPartyLoginSuccess} />
+              <AlipayLogin onLoginSuccess={handleThirdPartyLoginSuccess} />
             </div>
           </div>
 
