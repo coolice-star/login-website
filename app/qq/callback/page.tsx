@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, Loader2, XCircle } from 'lucide-react'
@@ -8,7 +8,18 @@ import Image from 'next/image'
 import { API_BASE_URL } from '@/lib/env'
 import { toast } from '@/components/ui/use-toast'
 
-export default function QQCallbackPage() {
+// 创建加载状态组件
+function LoadingState() {
+  return (
+    <div className="flex flex-col items-center space-y-3 py-8">
+      <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+      <p className="text-gray-600">正在加载页面...</p>
+    </div>
+  );
+}
+
+// 将主要内容提取到一个单独的组件
+function CallbackContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -182,5 +193,14 @@ export default function QQCallbackPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// 主页面组件
+export default function QQCallbackPage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <CallbackContent />
+    </Suspense>
   )
 }
