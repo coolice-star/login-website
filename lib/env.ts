@@ -3,7 +3,7 @@
  */
 
 // API基础URL - 确保包含/api路径
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://1fe81f0.r11.cpolar.top/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://testend.coolice.top/api';
 
 // 环境判断
 export const isDevelopment = process.env.NODE_ENV === 'development';
