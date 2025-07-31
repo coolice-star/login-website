@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { ShoppingBag, ShoppingCart, Search, Heart } from "lucide-react"
+import { ShoppingBag, ShoppingCart, Search, Heart, Wallet, Coins } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { UserDropdown } from "@/components/user-dropdown"
@@ -31,6 +31,7 @@ export default function ShopPage() {
   const [selectedCategory, setSelectedCategory] = useState("全部商品");
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [userPoints, setUserPoints] = useState(0);
   
   // 检查用户是否已登录
   useEffect(() => {
@@ -43,11 +44,63 @@ export default function ShopPage() {
     try {
       const userData = JSON.parse(userStr);
       setUser(userData);
+      // 获取用户积分
+      fetchUserPoints();
     } catch (error) {
       console.error("解析用户数据失败:", error);
       router.push("/login");
     }
   }, [router]);
+  
+  // 获取用户积分
+  const fetchUserPoints = async () => {
+    try {
+      const token = localStorage.getItem("access_token"); // 修复：使用正确的key
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      
+      console.log("请求用户积分:", `${API_BASE_URL}/payment/user/points`);
+      
+      if (!token) {
+        console.warn("未找到认证token，积分显示为0");
+        setUserPoints(0);
+        return;
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/payment/user/points`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log("积分接口响应状态:", response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log("积分接口响应:", result);
+        if (result.success) {
+          setUserPoints(result.data.points);
+        } else {
+          console.error("获取积分失败:", result.message);
+          setUserPoints(0);
+        }
+      } else if (response.status === 422 || response.status === 401) {
+        console.warn("积分接口认证失败，积分显示为0");
+        setUserPoints(0);
+      } else {
+        console.error("获取积分失败，状态码:", response.status);
+        setUserPoints(0);
+      }
+    } catch (error) {
+      console.error("获取用户积分失败:", error);
+      setUserPoints(0);
+    }
+  };
+  
+  // 跳转到充值页面
+  const goToRecharge = () => {
+    router.push('/recharge');
+  };
   
   // 根据分类和搜索筛选商品
   const filteredProducts = PRODUCTS.filter(product => {
@@ -96,6 +149,23 @@ export default function ShopPage() {
             </div>
             
             <div className="flex items-center gap-4">
+              {/* 积分显示 */}
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full">
+                <Coins className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">{userPoints}积分</span>
+              </div>
+              
+              {/* 充值按钮 */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToRecharge}
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                <Wallet className="h-4 w-4 mr-1" />
+                充值
+              </Button>
+              
               <Button variant="ghost" size="icon" className="relative">
                 <Heart className="h-5 w-5" />
                 <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">0</Badge>
@@ -119,6 +189,24 @@ export default function ShopPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+            </div>
+            
+            {/* 移动端积分和充值按钮 */}
+            <div className="flex items-center justify-between mt-3">
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full">
+                <Coins className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">{userPoints}积分</span>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToRecharge}
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                <Wallet className="h-4 w-4 mr-1" />
+                充值
+              </Button>
             </div>
           </div>
         </div>
