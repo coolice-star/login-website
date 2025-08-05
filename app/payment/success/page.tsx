@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,8 @@ interface PaymentOrder {
   updated_at: string;
 }
 
-export default function PaymentSuccessPage() {
+// 将使用 useSearchParams 的逻辑提取到单独的组件中
+function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [order, setOrder] = useState<PaymentOrder | null>(null);
@@ -369,5 +370,24 @@ export default function PaymentSuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 主组件，使用 Suspense 包装
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h2 className="text-lg font-semibold mb-2">加载中...</h2>
+            <p className="text-gray-600">请稍候</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <PaymentSuccessContent />
+    </Suspense>
   );
 } 
