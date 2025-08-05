@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Wallet, Coins, CreditCard, CheckCircle } from "lucide-react"
+import { ArrowLeft, Wallet, Coins, CreditCard, CheckCircle, Smartphone } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 
 interface RechargePackage {
   id: string;
@@ -16,11 +19,27 @@ interface RechargePackage {
   description: string;
 }
 
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  available: boolean;
+}
+
+interface PaymentForm {
+  action: string;
+  method: string;
+  params: Record<string, string>;
+}
+
 export default function RechargePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [packages, setPackages] = useState<RechargePackage[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string>('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('alipay');
   const [loading, setLoading] = useState(false);
   const [userPoints, setUserPoints] = useState(0);
   const [packagesLoading, setPackagesLoading] = useState(true);
@@ -28,18 +47,36 @@ export default function RechargePage() {
   // 默认充值套餐（如果API调用失败时使用）
   const DEFAULT_PACKAGES = [
     {
-      id: '0.1',
+      id: '0.01',
       name: '体验包',
-      amount: 0.1,  // 调整为0.1元
+      amount: 0.01,
       points: 50,
-      description: '充值0.1元获得50积分'
+      description: '充值0.01元获得50积分'
     },
     {
-      id: '0.2',
+      id: '0.02',
       name: '基础包', 
-      amount: 0.2,  // 调整为0.2元
+      amount: 0.02,
       points: 200,
-      description: '充值0.2元获得200积分'
+      description: '充值0.02元获得200积分'
+    }
+  ];
+
+  // 默认支付方式
+  const DEFAULT_PAYMENT_METHODS = [
+    {
+      id: 'alipay',
+      name: '支付宝',
+      icon: '支',
+      description: '使用支付宝安全支付',
+      available: true
+    },
+    {
+      id: 'wxpay',
+      name: '微信支付',
+      icon: '微',
+      description: '使用微信安全支付',
+      available: true
     }
   ];
 
@@ -54,75 +91,25 @@ export default function RechargePage() {
     try {
       const userData = JSON.parse(userStr);
       setUser(userData);
-      fetchRechargePackages();
+      // 获取用户积分
       fetchUserPoints();
+      // 获取充值套餐
+      fetchPackages();
+      // 获取支付方式
+      fetchPaymentMethods();
     } catch (error) {
       console.error("解析用户数据失败:", error);
       router.push("/login");
     }
   }, [router]);
 
-  // 获取充值档位
-  const fetchRechargePackages = async () => {
-    setPackagesLoading(true);
-    try {
-      const token = localStorage.getItem("access_token"); // 修复：使用正确的key
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-      
-      console.log("请求充值档位:", `${API_BASE_URL}/payment/packages`);
-      console.log("使用的token:", token ? "已获取" : "未获取");
-      
-      if (!token) {
-        console.warn("未找到认证token，使用默认档位");
-        setPackages(DEFAULT_PACKAGES);
-        setPackagesLoading(false);
-        return;
-      }
-      
-      const response = await fetch(`${API_BASE_URL}/payment/packages`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log("充值档位接口响应状态:", response.status);
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log("充值档位接口响应:", result);
-        if (result.success) {
-          setPackages(result.data);
-        } else {
-          console.error("获取充值档位失败，使用默认档位:", result.message);
-          setPackages(DEFAULT_PACKAGES);
-        }
-      } else if (response.status === 422 || response.status === 401) {
-        console.warn("认证失败，使用默认档位");
-        setPackages(DEFAULT_PACKAGES);
-      } else {
-        const errorData = await response.text();
-        console.error("充值档位接口错误，使用默认档位:", response.status, errorData);
-        setPackages(DEFAULT_PACKAGES);
-      }
-    } catch (error) {
-      console.error("获取充值档位失败，使用默认档位:", error);
-      setPackages(DEFAULT_PACKAGES);
-    } finally {
-      setPackagesLoading(false);
-    }
-  };
-
   // 获取用户积分
   const fetchUserPoints = async () => {
     try {
-      const token = localStorage.getItem("access_token"); // 修复：使用正确的key
+      const token = localStorage.getItem("access_token");
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
       
-      console.log("请求用户积分:", `${API_BASE_URL}/payment/user/points`);
-      
       if (!token) {
-        console.warn("未找到认证token，积分显示为0");
         setUserPoints(0);
         return;
       }
@@ -134,23 +121,11 @@ export default function RechargePage() {
         }
       });
       
-      console.log("积分接口响应状态:", response.status);
-      
       if (response.ok) {
         const result = await response.json();
-        console.log("积分接口响应:", result);
         if (result.success) {
           setUserPoints(result.data.points);
-        } else {
-          console.error("获取积分失败:", result.message);
-          setUserPoints(0);
         }
-      } else if (response.status === 422 || response.status === 401) {
-        console.warn("积分接口认证失败，积分显示为0");
-        setUserPoints(0);
-      } else {
-        console.error("获取积分失败，状态码:", response.status);
-        setUserPoints(0);
       }
     } catch (error) {
       console.error("获取用户积分失败:", error);
@@ -158,22 +133,89 @@ export default function RechargePage() {
     }
   };
 
-  // 发起充值
+  // 获取充值套餐
+  const fetchPackages = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      
+      console.log("请求充值套餐:", `${API_BASE_URL}/payment/packages`);
+      
+      const response = await fetch(`${API_BASE_URL}/payment/packages`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log("充值套餐接口响应状态:", response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log("充值套餐接口响应:", result);
+        
+        if (result.success && result.data) {
+          setPackages(result.data);
+        } else {
+          console.warn("使用默认充值套餐");
+          setPackages(DEFAULT_PACKAGES);
+        }
+      } else {
+        console.error("获取充值套餐失败，使用默认配置");
+        setPackages(DEFAULT_PACKAGES);
+      }
+    } catch (error) {
+      console.error("获取充值套餐异常:", error);
+      setPackages(DEFAULT_PACKAGES);
+    } finally {
+      setPackagesLoading(false);
+    }
+  };
+
+  // 获取支付方式
+  const fetchPaymentMethods = async () => {
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+      
+      const response = await fetch(`${API_BASE_URL}/payment/methods`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          setPaymentMethods(result.data);
+        } else {
+          setPaymentMethods(DEFAULT_PAYMENT_METHODS);
+        }
+      } else {
+        setPaymentMethods(DEFAULT_PAYMENT_METHODS);
+      }
+    } catch (error) {
+      console.error("获取支付方式失败:", error);
+      setPaymentMethods(DEFAULT_PAYMENT_METHODS);
+    }
+  };
+
+  // 处理充值
   const handleRecharge = async () => {
     if (!selectedPackage) {
-      alert('请选择充值档位');
+      toast.error('请选择充值套餐');
       return;
     }
 
-    setLoading(true);
-    
+    if (!selectedPaymentMethod) {
+      toast.error('请选择支付方式');
+      return;
+    }
+
     try {
-      const token = localStorage.getItem("access_token"); // 修复：使用正确的key
+      setLoading(true);
+      
+      const token = localStorage.getItem("access_token");
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
       
-      console.log("发起充值请求:", {
+      console.log("创建支付订单:", {
         package_id: selectedPackage,
-        url: `${API_BASE_URL}/payment/create`
+        payment_method: selectedPaymentMethod
       });
       
       const response = await fetch(`${API_BASE_URL}/payment/create`, {
@@ -183,49 +225,69 @@ export default function RechargePage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          package_id: selectedPackage
+          package_id: selectedPackage,
+          payment_method: selectedPaymentMethod
         })
       });
       
-      console.log("充值接口响应状态:", response.status);
+      console.log("创建支付订单响应状态:", response.status);
       
       if (response.ok) {
         const result = await response.json();
-        console.log("充值接口响应:", result);
+        console.log("创建支付订单响应:", result);
         
         if (result.success) {
-          // 创建新窗口显示支付页面
-          const paymentWindow = window.open("", "_blank", "width=800,height=600");
-          if (paymentWindow) {
-            paymentWindow.document.write(result.data.payment_html);
-            paymentWindow.document.close();
-            
-            // 监听支付窗口关闭
-            const checkClosed = setInterval(() => {
-              if (paymentWindow.closed) {
-                clearInterval(checkClosed);
-                // 支付窗口关闭后，跳转到支付结果页面
-                router.push(`/payment/success?order_no=${result.data.order_no}`);
-              }
-            }, 1000);
-          } else {
-            // 如果无法打开新窗口，在当前页面跳转
-            const blob = new Blob([result.data.payment_html], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            window.location.href = url;
-          }
+          toast.success('正在跳转到支付页面...');
+          
+          // 提交支付表单
+          setTimeout(() => {
+            submitPaymentForm(result.data.payment_form);
+          }, 1000);
         } else {
-          alert(`充值失败: ${result.message}`);
+          toast.error(result.message || '创建支付订单失败');
         }
       } else {
-        const error = await response.json();
-        alert(`充值失败: ${error.message || '请求失败'}`);
+        const errorResult = await response.json();
+        toast.error(errorResult.message || '创建支付订单失败');
       }
     } catch (error) {
-      console.error("发起充值失败:", error);
-      alert('充值失败，请重试');
+      console.error("创建支付订单异常:", error);
+      toast.error('创建支付订单失败');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 提交支付表单
+  const submitPaymentForm = (paymentForm: PaymentForm) => {
+    try {
+      console.log("提交支付表单:", paymentForm);
+      
+      // 创建表单元素
+      const form = document.createElement('form');
+      form.method = paymentForm.method;
+      form.action = paymentForm.action;
+      form.target = '_blank'; // 新窗口打开
+      
+      // 添加表单参数
+      Object.keys(paymentForm.params).forEach(key => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = paymentForm.params[key];
+        form.appendChild(input);
+      });
+      
+      // 提交表单
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
+      
+      toast.info('请在新窗口完成支付');
+
+    } catch (error) {
+      console.error("跳转支付页面失败:", error);
+      toast.error('跳转支付页面失败');
     }
   };
 
@@ -233,146 +295,207 @@ export default function RechargePage() {
     return null; // 等待检查登录状态
   }
 
+  const selectedPackageInfo = packages.find(pkg => pkg.id === selectedPackage);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 头部导航 */}
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.back()}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-xl font-bold">积分充值</h1>
-            </div>
-            
-            <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full">
-              <Coins className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-700">{userPoints}积分</span>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="container mx-auto px-4 py-8">
+        {/* 头部导航 */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => router.back()}
+            className="hover:bg-white/70"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">充值中心</h1>
+            <p className="text-gray-600">选择充值套餐，快速获得积分</p>
           </div>
         </div>
-      </header>
 
-      {/* 主要内容 */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          {/* 用户信息卡片 */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="h-5 w-5" />
-                充值说明
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm text-gray-600">
-                <p>• 充值成功后积分将立即到账</p>
-                <p>• 积分可用于购买商品或兑换优惠券</p>
-                <p>• 支付完成后将自动返回确认页面</p>
-                <p>• 如有问题请联系客服</p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* 左侧：用户信息和当前积分 */}
+            <div className="md:col-span-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wallet className="h-5 w-5 text-blue-600" />
+                    账户信息
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="text-sm text-gray-600">用户名</div>
+                    <div className="font-medium">{user.name || user.username || user.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600">当前积分</div>
+                    <div className="flex items-center gap-2">
+                      <Coins className="h-5 w-5 text-yellow-500" />
+                      <span className="text-2xl font-bold text-yellow-600">{userPoints}</span>
+                      <span className="text-gray-500">积分</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* 充值档位选择 */}
-          <div className="space-y-4 mb-8">
-            <h2 className="text-lg font-semibold">选择充值档位</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {packagesLoading ? (
-                <div className="col-span-full text-center py-8">
-                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="mt-2 text-gray-500">加载充值档位中...</p>
-                </div>
-              ) : packages.length === 0 ? (
-                <div className="col-span-full text-center py-8">
-                  <p className="text-gray-500">暂无充值档位，请稍后再试。</p>
-                </div>
-              ) : (
-                packages.map((pkg) => (
-                  <Card
-                    key={pkg.id}
-                    className={`cursor-pointer transition-all duration-200 ${
-                      selectedPackage === pkg.id
-                        ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedPackage(pkg.id)}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold text-lg">{pkg.name}</h3>
-                            {pkg.id === '0.02' && (
-                              <Badge variant="secondary" className="bg-orange-100 text-orange-700">
-                                推荐
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <p className="text-2xl font-bold text-blue-600">
-                              ¥{pkg.amount}
-                            </p>
-                            <p className="text-lg font-medium text-green-600">
-                              获得 {pkg.points} 积分
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {pkg.description}
-                            </p>
-                          </div>
+            {/* 右侧：充值套餐和支付方式 */}
+            <div className="md:col-span-2">
+              <div className="space-y-6">
+                {/* 充值套餐选择 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-green-600" />
+                      选择充值套餐
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {packagesLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-2 text-gray-600">加载充值套餐...</p>
+                      </div>
+                    ) : (
+                      <RadioGroup value={selectedPackage} onValueChange={setSelectedPackage}>
+                        <div className="grid gap-4">
+                          {packages.map((pkg) => (
+                            <div key={pkg.id} className="relative">
+                              <RadioGroupItem 
+                                value={pkg.id} 
+                                id={pkg.id}
+                                className="peer sr-only"
+                              />
+                              <Label 
+                                htmlFor={pkg.id}
+                                className="flex items-center gap-4 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition-all"
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-lg">{pkg.name}</span>
+                                    <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                      +{pkg.points}积分
+                                    </Badge>
+                                  </div>
+                                  <div className="text-sm text-gray-600 mt-1">{pkg.description}</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-2xl font-bold text-blue-600">¥{pkg.amount}</div>
+                                </div>
+                              </Label>
+                            </div>
+                          ))}
                         </div>
-                        
-                        <div className="ml-4">
-                          {selectedPackage === pkg.id ? (
-                            <CheckCircle className="h-6 w-6 text-blue-500" />
-                          ) : (
-                            <div className="h-6 w-6 border-2 border-gray-300 rounded-full" />
-                          )}
+                      </RadioGroup>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* 支付方式选择 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Smartphone className="h-5 w-5 text-purple-600" />
+                      选择支付方式
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <RadioGroup value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                      <div className="grid gap-3">
+                        {paymentMethods.map((method) => (
+                          <div key={method.id} className="relative">
+                            <RadioGroupItem 
+                              value={method.id} 
+                              id={method.id}
+                              className="peer sr-only"
+                              disabled={!method.available}
+                            />
+                            <Label 
+                              htmlFor={method.id}
+                              className={`flex items-center gap-3 p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 peer-checked:border-purple-600 peer-checked:bg-purple-50 transition-all ${
+                                !method.available ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                            >
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                                method.id === 'alipay' ? 'bg-blue-600' : 'bg-green-600'
+                              }`}>
+                                {method.icon}
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium">{method.name}</div>
+                                <div className="text-sm text-gray-600">{method.description}</div>
+                              </div>
+                              {method.available && (
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                              )}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </RadioGroup>
+                  </CardContent>
+                </Card>
+
+                {/* 订单预览和确认支付 */}
+                {selectedPackage && selectedPaymentMethod && (
+                  <Card className="border-blue-200 bg-blue-50">
+                    <CardHeader>
+                      <CardTitle className="text-blue-900">订单预览</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">充值套餐:</span>
+                          <span className="font-medium">{selectedPackageInfo?.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">支付金额:</span>
+                          <span className="font-bold text-lg text-blue-600">¥{selectedPackageInfo?.amount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">获得积分:</span>
+                          <span className="font-bold text-green-600">+{selectedPackageInfo?.points}积分</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">支付方式:</span>
+                          <span className="font-medium">
+                            {paymentMethods.find(m => m.id === selectedPaymentMethod)?.name}
+                          </span>
+                        </div>
+                        <div className="pt-4 border-t">
+                          <Button 
+                            onClick={handleRecharge}
+                            disabled={loading}
+                            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                            size="lg"
+                          >
+                            {loading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                创建订单中...
+                              </>
+                            ) : (
+                              <>
+                                <Wallet className="h-4 w-4 mr-2" />
+                                立即支付 ¥{selectedPackageInfo?.amount}
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))
-              )}
+                )}
+              </div>
             </div>
           </div>
-
-          {/* 支付按钮 */}
-          <div className="space-y-4">
-            <Button
-              onClick={handleRecharge}
-              disabled={!selectedPackage || loading || packagesLoading}
-              className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  创建订单中...
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  立即充值
-                </div>
-              )}
-            </Button>
-            
-            <p className="text-center text-sm text-gray-500">
-              点击充值即表示您同意我们的
-              <Link href="/terms" className="text-blue-600 hover:underline">服务条款</Link>
-              和
-              <Link href="/privacy" className="text-blue-600 hover:underline">隐私政策</Link>
-            </p>
-          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 } 
