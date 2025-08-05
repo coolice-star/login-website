@@ -488,6 +488,17 @@ export default function ShopPage() {
                 充值
               </Button>
               
+              {/* 充值记录按钮 */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToRechargeHistory}
+                className="border-green-600 text-green-600 hover:bg-green-50"
+              >
+                <History className="h-4 w-4 mr-1" />
+                充值记录
+              </Button>
+              
               {/* 购买记录按钮 */}
               <Button 
                 variant="outline" 
